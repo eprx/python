@@ -1,0 +1,134 @@
+import os
+
+dir = os.path.expandvars(r'%LOCALAPPDATA%\Archon\Saved\Config\WindowsClient')
+engine = f'{dir}\\Engine.ini'
+game = f'{dir}\\Game.ini'
+
+graphics = {
+    'Shadows': 'r.ShadowQuality=0',
+    'ViewDistance': 'r.ViewDistanceScale=4',
+    'Reflections': 'r.SSR=0',
+    'MipBias' : 'r.Streaming.MipBias=',
+    'Anisotropy': 'r.MaxAnisotropy=',
+    'PoolSize': 'r.Streaming.PoolSize=',
+    'AntiAliasing' : 'r.AntiAliasingMethod=0'
+}
+
+def color_text(code, text):
+    return f"\33[{code}m{text}\33[0m"
+
+def checkFile(filename):
+    with open(filename, 'r') as f:
+        for i in f.readlines():
+            print(i)
+
+
+def editFile(filename, setting, val1=None):
+    with open(filename, 'r+') as f:
+        lines = f.readlines()
+
+        # Handle the case where val1 is not provided
+        val1 = str(val1) if val1 is not None else ''
+
+        setting_value = graphics[setting] + val1
+
+        # Find the index of the setting line
+        line_index = next((i for i, line in enumerate(lines) if line.strip().startswith(graphics[setting])), None)
+
+        # If the setting exists in the file, ask the user to edit, delete or cancel
+        if line_index is not None:
+            print(color_text(31, f'Already exists: {graphics[setting]}'))
+            userInput = input(color_text(31, f"Would you like to edit: '{graphics[setting]}'? \n(Y to edit / D to delete / N to cancel)\n"))
+
+            # Delete the line if the user chooses 'd'
+            if userInput.lower() == 'd':
+                if line_index > 0:
+                    # Remove the target line and the line above it
+                    del lines[line_index:line_index + 1]
+                else:
+                    # Remove only the target line if it's the first line
+                    del lines[line_index]
+
+            # Cancel if the user chooses 'n'
+            elif userInput.lower() == 'n':
+                return  # Cancel the operation
+
+            # Edit the setting if the user chooses 'y'
+            elif userInput.lower() == 'y':
+                # Modify the line at the found index
+                lines[line_index] = f'{setting_value}\n'
+                # Go back to the start of the file and write the lines back
+                f.seek(0)
+                f.writelines(lines)
+                f.truncate()  # Ensure any leftover content is removed
+
+                print(color_text(32, f'Updated: {setting_value}'))
+
+        else:
+            # If the setting doesn't exist, add it at the end
+            # Ensure there's only one [SystemSettings] header in the file
+            lines.append('\n[SystemSettings]\n')
+            lines.append(f'{setting_value}\n')
+            print(color_text(32, f'Added: {setting_value}\n'))
+
+        # Write all lines back to the file
+        f.seek(0)
+        f.writelines(lines)
+        f.truncate()  # Ensure any extra content is removed
+
+def textures():
+    userInput = input(color_text(1, '1. Edit MipBias\n'
+                      '2. Edit Anisotropy\n'
+                      '3. Edit Streaming Pool Size\n\n'))
+    if userInput == '1':
+        print('Low: 1028 / Medium: 2048 / High: 4096 (Affects the texture resolution)')
+        userInput2 = input('Enter a value: ')
+        editFile(engine, 'MipBias', userInput2)
+        return userInput2
+    elif userInput == '2':
+        print('Range 1-16, affects whether a texture will be blurry or crisp at distance')
+        userInput2 = input('Enter a value: ')
+        editFile(engine, 'Anisotropy', userInput2)
+        return userInput2
+    elif userInput == '3':
+        print('Texture streaming budget (value should be under your VRAM limit')
+        userInput2 = input('Enter a value: ')
+        editFile(engine, 'PoolSize', userInput2)
+        return userInput2
+
+
+def options():
+    Settings = ('1. Disable Shadows\n'
+                '2. Modify Textures\n'
+                '3. Disable Screen Spaced Reflections\n'
+                '4. Increase View Distance\n'
+                '5. Disable AntiAliasing\n'
+                '6. Exit\n\n')
+    userInput = input(color_text(1, f'{Settings}Choose an option: '))
+    return userInput
+
+def main():
+    while True:
+        userInput = options()
+        if userInput == '1':
+            editFile(engine, 'Shadows')
+        elif userInput == '2':
+            textures()
+        elif userInput == '3':
+            editFile(engine, 'Reflections')
+        elif userInput == '4':
+            editFile(engine, 'ViewDistance')
+        elif userInput == '5':
+            editFile(engine, 'AntiAliasing')
+        elif userInput == '6':
+            break
+        else:
+            print("Invalid choice. Please try again.")
+
+
+
+print(color_text(31, '# Dauntless Config Tool #\n'))
+
+main()
+
+
